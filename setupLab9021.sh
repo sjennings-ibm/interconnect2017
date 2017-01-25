@@ -45,6 +45,10 @@ cf ic cpi bluemixenablement/todoic registry.ng.bluemix.net/$ns/todoic
 cf ic run -m 512 --name integration registry.ng.bluemix.net/$ns/todoic
 publicip=`cf ic ip request | grep obtained | grep -Po '(?<=\").*(?=\")'`
 cf ic ip bind $publicip integration
+
+# setup postgresql JDBC
+wget https://jdbc.postgresql.org/download/postgresql-9.4.1212.jar
+cp postgresql-9.4.1212.jar /home/bmxuser/wlp/usr/shared/resources/
  
 # work with eclipse
 cd /home/bmxuser
