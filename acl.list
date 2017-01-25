@@ -1,0 +1,4 @@
+acl allow :9080
+acl allow :9443
+acl allow :5432
+acl allow :7276
