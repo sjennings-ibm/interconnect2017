@@ -71,16 +71,3 @@ cf ic ip bind $publicip integration
 echo "#    Public IP for container is: $publicip"
 echo "#    On-premises container initialized "
 echo "#######################################################################"
-
-# APIC 
-echo "#######################################################################"
-echo "# 4. Setup API Connect service "
-apicnum=`cf services | grep APIConnect | wc -l`
-if [ $apicnum -eq 0 ]; then
-  cf create-service APIConnect Essentials apic-refarch
-  echo "#    API Connect service created"
-else 
-  echo "#    You already have API Connect provisioned; "
-  echo "#    you can use your existing API Connect instance"
-fi
-echo "#######################################################################"
