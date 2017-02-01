@@ -20,7 +20,7 @@ echo
 echo "#######################################################################"
 echo "# 1. Logging in to Bluemix "
 # Run cf login
-cf login -a api.$region.bluemix.net -u $userid -p $password -o $userid | tee login.out
+cf login -a api.$region.bluemix.net -u "$userid" -p "$password" -o "$userid" -s dev | tee login.out
 logerr=`grep FAILED login.out | wc -l`
 rm login.out
 if [ $logerr -eq 1 ]; then

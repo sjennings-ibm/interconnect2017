@@ -66,8 +66,8 @@ echo "#######################################################################"
 echo "#######################################################################"
 echo "# 3a. Setup mysql container  "
 cf ic cpi vbudi/refarch-mysql registry.$reqion.bluemix.net/$ns/mysql-$suffix
-cf ic run -m 512 --name mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD=Pass4Admin123 -e MYSQL_USER=dbuser -e MYSQL_PASSWORD=Pass4dbUs3R -e MYSQL_DATABASE=inventorydb registry.ng.bluemix.net/$ns/mysql-$suffix
-sleep 15
+cf ic run -m 256 --name mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD=Pass4Admin123 -e MYSQL_USER=dbuser -e MYSQL_PASSWORD=Pass4dbUs3R -e MYSQL_DATABASE=inventorydb registry.ng.bluemix.net/$ns/mysql-$suffix
+sleep 10
 cf ic exec -it mysql-$suffix sh load-data.sh 
 cf ic inspect mysql-$suffix | grep -i ipaddr 
 
@@ -139,59 +139,4 @@ cd /home/bmxuser
 git clone https://github.com/ibm-cloud-architecture/refarch-cloudnative-bff-inventory
 git clone https://github.com/ibm-cloud-architecture/refarch-cloudnative-bff-socialreview
 git clone https://github.com/ibm-cloud-architecture/refarch-cloudnative-api
-
-cd refarch-cloudnative-bff-inventory
-/bin/bash set-zuul-proxy-url.sh -c $CTXPATH -m $INVENTORY_MSNAME -z $ZUUL_PROXY_URL
-cf create-service Auto-Scaling free cloudnative-autoscale
-cf push "${CF_APP}" -n "${CF_APP}" -d "${APP_DOMAIN}"
-
-cd /home/bmxuser
-cd refarch-cloudnative-bff-socialreview
-/bin/bash set-zuul-proxy-url.sh -c $CTXPATH -m $SOCIALREVIEW_MSNAME -z $ZUUL_PROXY_URL
-
-apic login -u $APIC_USER -p $APIC_PASS -s ${APIC_URL}
-apic config:set app=apic-app://${APIC_URL}/orgs/${ORGS}/apps/${APP_NAME}
-apic apps:publish | tee -a publish.out
-TARGET_HOST=$(cat publish.out|grep 'API target urls:'|awk '{print $NF}')
-echo "TARGET_HOST: ${TARGET_HOST}"
-sed -i -e "/^x\-ibm\-configuration\:$/,/^.*\:$ /{/properties\:$/,/$/{/TARGET\_HOST\:$/{N;s/\(value\: \"https\:\/\/\)\(.*\)\(\"$\)/\1$TARGET_HOST\3/}}}"  -e 's/\(\\ \\"k\\"\: \\"\)\(.*\)\(\\"\\\)/\1JSONWEBTOKENSHAREDSECRET\3/' -e "s/JSONWEBTOKENSHAREDSECRET/$JWT_SHARED_SECRET/" definitions/socialreview.yaml
-cat definitions/socialreview.yaml
-echo -e "Publish the SocialReview api"
-      cat definitions/socialreview.yaml
-      echo -e "Publish the SocialReview api"
-      apic config:set catalog=apic-catalog://${APIC_URL}/orgs/${ORGS}/catalogs/bluecompute
-      apic publish definitions/socialreview-product.yaml
-
-            cf bs "${CF_APP}" cloudnative-autoscale
-      cf restage "${CF_APP}"
-
-      
-
-# get space and org info
-orgid=`cf ic info | grep Org |  grep -Po '(?<=\().*(?=\))'`
-spaceid=`cf ic info | grep Space | grep -Po '(?<=\().*(?=\))'`
-
-# Create secure gateway service
-cf create-service SecureGateway securegatewayplan sginstance
-
-# Create Integration Gateway
-authstr=`echo $userid:$password | base64`
-gwjson=`curl -k -X POST -H "Authorization: Basic $authstr" -H "Content-Type: application/json" -d "{\"desc\":\"IntegrationGateway\", \"enf_tok_sec\":false, \"token_exp\":0}" https://sgmanager.ng.bluemix.net/v1/sgconfig?org_id=$orgid&space_id=$spaceid`
-jwt=`echo $gwjson | sed -e 's/[{}]/''/g' | awk -v k="text" '{n=split($0,a,","); for (i=1; i<=n; i++) print a[i]}' | grep jwt | grep -Po '(?<=\:\").*(?=\")'`
-gwID=`echo $gwjson | sed -e 's/[{}]/''/g' | awk -v k="text" '{n=split($0,a,","); for (i=1; i<=n; i++) print a[i]}' | grep \"_id | grep -Po '(?<=\:\").*(?=\")'`
-
-# Create destination
-destjson=`curl -k -X POST -H "Authorization: Bearer $jwt" -H "Content-Type: application/json" -d "{\"desc\":\"REST\", \"ip\":\"$publicip\", \"port\":9080}" https://sgmanager.ng.bluemix.net/v1/sgconfig/$gwID/destinations`
-destHost=`echo $destjson | sed -e 's/[{}]/''/g' | awk -v k="text" '{n=split($0,a,","); for (i=1; i<=n; i++) print a[i]}' | grep hostname | grep -Po '(?<=\:\").*(?=\")'`
-destPort=`echo $destjson | sed -e 's/[{}]/''/g' | awk -v k="text" '{n=split($0,a,","); for (i=1; i<=n; i++) print a[i]}' | grep \"port\" | grep -Po '(?<=\:).*$'`
-# Connect to container
-cf ic cp runsgclient.sh integration:/root/runsgclient.sh
-cf ic cp acl.list integration:/root/acl.list
-cf ic exec integration /root/runsgclient.sh $gwID
-
-# work with eclipse
-cd /home/bmxuser
-git clone https://github.com/vbudi000/integration-lab-ic2017
-eclipse/eclipse -data ./integration-lab-ic2017
-
-
+git clone https://github.com/ibm-cloud-architecture/refarch-cloudnative-bluecompute-web
