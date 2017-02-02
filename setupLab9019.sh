@@ -24,7 +24,7 @@ else
     apicreg="us"
   fi
 fi
-dom="$domreg$dom"
+dom="mybluemix.net"
 
 IFS="@"
 set -- $userid
@@ -89,7 +89,7 @@ until [  $sqlok -ne 0 ]; do
 done
 
 echo "cf ic exec -it mysql-$suffix sh load-data.sh"
-"cf ic exec -it mysql-$suffix sh load-data.sh"
+cf ic exec -it mysql-$suffix sh load-data.sh
 
 mysqlIP=`cf ic inspect mysql-$suffix | grep -i ipaddr | head -n 1 | grep -Po '(?<="IPAddress": ")[^"]*' `
 
@@ -110,7 +110,7 @@ else
 fi
 # get cred
 echo "curl -X PUT https://$cldusername:$cldpassword@$cldhost/socialreviewdb"
-"curl -X PUT https://$cldusername:$cldpassword@$cldhost/socialreviewdb"
+curl -X PUT https://$cldusername:$cldpassword@$cldhost/socialreviewdb
 
 echo "# 3c. Create eureka and zuul"
 cf ic cpi vbudi/refarch-eureka  registry.$region.bluemix.net/$ns/eureka-$suffix
