@@ -1,4 +1,17 @@
 #!/bin/bash
+
+if [ "$#" -ne 1 ]; then
+    echo "Illegal number of parameters"
+    exit
+else
+     clientid=$1
+     chrlen=${#clientid}
+     if [ $chrlen -ne 36 ]; then
+        echo "Argument must be client ID "
+        exit
+     fi
+fi
+
 printf "Region: 1. US-South 2. Europe \n AP does not support Container\n"
 read choice
 printf "IBMid:"
@@ -60,12 +73,12 @@ sed -i -e 's/inventory-bff-app.mybluemix.net/inventory-bff-app-'$suffix.$domreg$
 sed -i -e 's/api.us.apiconnect.ibmcloud.com\/centusibmcom-cloudnative-dev\/bluecompute/api.'$apicreg'.apiconnect.ibmcloud.com\/'$suffix'-dev\/bluecompute-'$suffix'/g' /home/bmxuser/refarch-cloudnative-bff-socialreview/socialreview/definitions/socialreview.yaml
 sed -i -e 's/apiconnect-243ab119-1c05-402c-a74c-6125122c9273.centusibmcom-cloudnative-dev.apic.mybluemix.net/'$sochost'/g' /home/bmxuser/refarch-cloudnative-bff-socialreview/socialreview/definitions/socialreview.yaml
 
-apic config:set catalog=apic-catalog://$apicreg.apiconnect.ibmcloud.com/orgs/$suffix-dev/catalogs/bluecompute-$suffix
-
 cd /home/bmxuser/refarch-cloudnative-api/inventory/
+apic config:set catalog=apic-catalog://$apicreg.apiconnect.ibmcloud.com/orgs/$suffix-dev/catalogs/bluecompute-$suffix
 apic publish inventory-product_0.0.1.yaml
 
 cd /home/bmxuser/refarch-cloudnative-bff-socialreview/socialreview/definitions/
+apic config:set catalog=apic-catalog://$apicreg.apiconnect.ibmcloud.com/orgs/$suffix-dev/catalogs/bluecompute-$suffix
 apic publish socialreview-product.yaml
 
 echo "#######################################################################"

@@ -8,6 +8,7 @@ printf "Password:"
 stty -echo
 read password
 stty echo
+starttime=`date`
 
 domreg=""
 if [ $choice -eq 1 ]; then 
@@ -74,7 +75,7 @@ echo "#######################################################################"
 echo "################################################################r#######"
 echo "# 3a. Setup mysql container  "
 cf ic cpi vbudi/refarch-mysql registry.$region.bluemix.net/$ns/mysql-$suffix
-cf ic run -m 256 --name mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD=Pass4Admin123 -e MYSQL_USER=dbuser -e MYSQL_PASSWORD=Pass4dbUs3R -e MYSQL_DATABASE=inventorydb registry.$region.bluemix.net/$ns/mysql-$suffix
+cf ic run -m 256 --name mysql-$suffix -p 3306:3306 -e MYSQL_ROOT_PASSWORD=Pass4Admin123 -e MYSQL_USER=dbuser -e MYSQL_PASSWORD=Pass4dbUs3R -e MYSQL_DATABASE=inventorydb registry.$region.bluemix.net/$ns/mysql-$suffix
 echo "Waiting for mysql container to start ..."  
 sqlok=`cf ic ps | grep mysql | grep unning | wc -l`
 until [  $sqlok -ne 0 ]; do
@@ -87,9 +88,8 @@ until [  $sqlok -ne 0 ]; do
     fi
 done
 
-load="cf ic exec -it mysql-$suffix sh load-data.sh"
-echo $load
-$load
+echo "cf ic exec -it mysql-$suffix sh load-data.sh"
+"cf ic exec -it mysql-$suffix sh load-data.sh"
 
 mysqlIP=`cf ic inspect mysql-$suffix | grep -i ipaddr | head -n 1 | grep -Po '(?<="IPAddress": ")[^"]*' `
 
@@ -109,9 +109,8 @@ else
     echo "Cloudant url: $cldurl"
 fi
 # get cred
-crtdb="curl -X PUT $cldurl/socialreviewdb"
-echo $crtdb
-$crtdb
+echo "curl -X PUT https://$cldusername:$cldpassword@$cldhost/socialreviewdb"
+"curl -X PUT https://$cldusername:$cldpassword@$cldhost/socialreviewdb"
 
 echo "# 3c. Create eureka and zuul"
 cf ic cpi vbudi/refarch-eureka  registry.$region.bluemix.net/$ns/eureka-$suffix
@@ -147,3 +146,6 @@ git clone https://github.com/ibm-cloud-architecture/refarch-cloudnative-bff-inve
 git clone https://github.com/ibm-cloud-architecture/refarch-cloudnative-bff-socialreview
 git clone https://github.com/ibm-cloud-architecture/refarch-cloudnative-api
 git clone https://github.com/ibm-cloud-architecture/refarch-cloudnative-bluecompute-web
+
+endtime=`date`
+echo $starttime $endtime
