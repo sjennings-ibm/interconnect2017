@@ -58,37 +58,63 @@ if [ $err -eq 1 ]; then
   cf ic init > /dev/null
 fi
 ns=`cf ic namespace get`
-suffix=`echo -e $userid | tr -d \@_-.` 
+suffix=`echo -e $userid | tr -d '@_.-' | tr -d '[:space:]'` 
 echo "#    IBM Container initialized ... "
 echo "#######################################################################"
 
 # deploy social review - eureka - zuul - bff - apic 
-echo "#######################################################################"
+echo "################################################################r#######"
 echo "# 3a. Setup mysql container  "
-cf ic cpi vbudi/refarch-mysql registry.$reqion.bluemix.net/$ns/mysql-$suffix
-cf ic run -m 512 --name mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD=Pass4Admin123 -e MYSQL_USER=dbuser -e MYSQL_PASSWORD=Pass4dbUs3R -e MYSQL_DATABASE=inventorydb registry.ng.bluemix.net/$ns/mysql-$suffix
-sleep 15
+cf ic cpi vbudi/refarch-mysql registry.$region.bluemix.net/$ns/mysql-$suffix
+cf ic run -m 256 --name mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD=Pass4Admin123 -e MYSQL_USER=dbuser -e MYSQL_PASSWORD=Pass4dbUs3R -e MYSQL_DATABASE=inventorydb registry.$region.bluemix.net/$ns/mysql-$suffix
+sleep 10 # must wait until status is running or exit if shutdown
+ok=`cf ic ps | grep mysql | grep unning | wc -l`
 cf ic exec -it mysql-$suffix sh load-data.sh 
-cf ic inspect mysql-$suffix | grep -i ipaddr 
+mysqlIP=`cf ic inspect mysql-$suffix | grep -i ipaddr | head -n 1 | grep -Po '(?<="IPAddress": ")[^"]*' `
 
 echo "# 3b. Create Cloudant database "
 cf create-service cloudantNoSQLDB Lite socialreviewdb-$suffix
 cf create-service-key socialreviewdb-$suffix cred
-cloudant-cred=`cf service-key socialreviewdb-$suffix cred`
-cldurl=`echo -e cloudant-cred | grep url | grep -Po '(?<=\:\").*(?=\")'`
-cldhost=`echo -e cloudant-cred | grep host | grep -Po '(?<=\:\").*(?=\")'`
-cldusername=`echo -e cloudant-cred | grep username | grep -Po '(?<=\:\").*(?=\")'`
-cldpassword=`echo -e cloudant-cred | grep password | grep -Po '(?<=\:\").*(?=\")'`
+cloudantCred=`cf service-key socialreviewdb-$suffix cred`
+cldurl=`echo -e $cloudantCred | grep url |  grep -Po '(?<=\"url\": \")[^"]*'`
+cldhost=`echo -e $cloudantCred | grep host |  grep -Po '(?<=\"host\": \")[^"]*'`
+cldusername=`echo -e $cloudantCred | grep username |  grep -Po '(?<=\"username\": \")[^"]*'`
+cldpassword=`echo -e $cloudantCred | grep password |  grep -Po '(?<=\"password\": \")[^"]*'`
 
 # get cred
 curl -X PUT $cldurl/socialreviewdb
 
+echo "# 3c. Create eureka and zuul"
+cf ic cpi vbudi/refarch-eureka  registry.$region.bluemix.net/$ns/eureka-$suffix
+cf ic cpi vbudi/refarch-zuul  registry.$region.bluemix.net/$ns/zuul-$suffix
+cf ic group create --name eureka_cluster --publish 8761 --memory 256 --auto \
+  --min 1 --max 3 --desired 1 \
+  --hostname netflix-eureka-$suffix \
+  --domain $region.mybluemix.net \
+  --env eureka.client.fetchRegistry=true \
+  --env eureka.client.registerWithEureka=true \
+  --env eureka.client.serviceUrl.defaultZone=http://eureka-$suffix.mybluemix.net/eureka/ \
+  --env eureka.instance.hostname=eureka-$suffix.mybluemix.net \
+  --env eureka.instance.nonSecurePort=80 \
+  --env eureka.port=80 \
+   registry.$region.bluemix.net/$ns/eureka-$suffix
+cf ic group create --name zuul_cluster \
+  --publish 8080 --memory 256 --auto --min 1 --max 3 --desired 1 \
+  --hostname netflix-zuul-$suffix \
+  --domain $region.mybluemix.net \
+  --env eureka.client.serviceUrl.defaultZone="http://eureka-$suffix.mybluemix.net/eureka" \
+  --env eureka.instance.hostname=netflix-zuul-$suffix.mybluemix.net \
+  --env eureka.instance.nonSecurePort=80 \
+  --env eureka.instance.preferIpAddress=false \
+  --env spring.cloud.client.hostname=zuul-$suffix.mybluemix.net \
+  registry.$region.bluemix.net/$ns/zuul-$suffix
+  
   
 echo "# 3c. Create inventory microservices"
-cf ic cpi vbudi/refarch-inventory registry.$reqion.bluemix.net/$ns/inventoryservice-$suffix
+cf ic cpi vbudi/refarch-inventory registry.$region.bluemix.net/$ns/inventoryservice-$suffix
 cf ic group create -p 8080 -m 256 --min 1 --desired 1 \
  --auto --name micro-inventory-group-$suffix \
- -e "spring.datasource.url=jdbc:mysql://${ipaddr}:3306/inventorydb" \
+ -e "spring.datasource.url=jdbc:mysql://$mysqlIP:3306/inventorydb" \
  -e "eureka.client.serviceUrl.defaultZone=http://eureka-$suffix.mybluemix.net/eureka/" \
  -e "spring.datasource.username=dbuser" \
  -e "spring.datasource.password=Pass4dbUs3R" \
@@ -96,7 +122,7 @@ cf ic group create -p 8080 -m 256 --min 1 --desired 1 \
  registry.$region.bluemix.net/$ns/inventoryservice-$suffix
 
 echo "# 3d. Create socialreview microservices"
-cf ic cpi vbudi/refarch-socialreview registry.$reqion.bluemix.net/$ns/socialservice-$suffix
+cf ic cpi vbudi/refarch-socialreview registry.$region.bluemix.net/$ns/socialservice-$suffix
 cf ic group create -p 8080 -m 256 \
   --min 1 --desired 1 --auto \
   --name micro-socialreview-group \
@@ -106,7 +132,7 @@ cf ic group create -p 8080 -m 256 \
   -e "cloudant.username=$cldusername" \
   -e "cloudant.password=$cldpassword " \
   -e "cloudant.host=https://$cldhost" \ 
-  registry.$region.bluemix.net/$ns/socialreviewservice-$suffix 
+ registry.$region.bluemix.net/$ns/socialservice-$suffix 
   
   
 echo "# 3e deploy BFFs"
@@ -115,4 +141,3 @@ git clone https://github.com/ibm-cloud-architecture/refarch-cloudnative-bff-inve
 git clone https://github.com/ibm-cloud-architecture/refarch-cloudnative-bff-socialreview
 git clone https://github.com/ibm-cloud-architecture/refarch-cloudnative-api
 git clone https://github.com/ibm-cloud-architecture/refarch-cloudnative-bluecompute-web
-
