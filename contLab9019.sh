@@ -24,6 +24,12 @@ else
 fi
 suffix=`echo -e $userid | tr -d '@_.-' | tr -d '[:space:]'` 
 dom="mybluemix.net"
+apic login -s $apicreg.apiconnect.ibmcloud.com -u $userid -p $password
+catexist=`apic catalogs -s $apicreg.apiconnect.ibmcloud.com -o $suffix-dev | grep bluecompute-$suffix | wc -l`
+if [ $catexist -ne 1 ]; then
+   echo "Cannot get the unique catalog bluecompute-$suffix. Exiting ..."
+   exit
+fi
 
 echo "#######################################################################"
 echo "# 4a Install BFFs"
@@ -40,7 +46,6 @@ echo "# 4b Install Social review BFFs"
 cd /home/bmxuser/refarch-cloudnative-bff-socialreview/socialreview
 /bin/bash set-zuul-proxy-url.sh -z netflix-zuul-$suffix.$domreg$dom
 
-apic login -s $apicreg.apiconnect.ibmcloud.com -u $userid -p $password
 apic config:set app=apic-app://$apicreg.apiconnect.ibmcloud.com/orgs/$suffix-dev/apps/socialreview-bff-app-$suffix
 apic apps:publish
 cf bs socialreview-bff-app-$suffix cloudnative-autoscale-$suffix
@@ -73,6 +78,7 @@ sed -i -e 's/bluecompute-web-app/bluecompute-web-app-'$suffix'/g' manifest.yml
 sed -i -e 's/api.us.apiconnect.ibmcloud.com/api.'$apicreg'.apiconnect.ibmcloud.com/g' config/default.json
 sed -i -e 's/centusibmcom-cloudnative/'$suffix'/g' config/default.json
 sed -i -e 's/bluecompute/bluecompute-'$suffix'/g' config/default.json
+
 sed -i -e 's/3f1b4cc8-78dc-450e-9461-edf377105c7a/'$clientid'/g' config/default.json
 
 cf push 

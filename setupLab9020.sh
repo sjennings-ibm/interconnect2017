@@ -75,8 +75,17 @@ echo "################################################################r#######"
 echo "# 3a. Setup mysql container  "
 cf ic cpi vbudi/refarch-mysql registry.$region.bluemix.net/$ns/mysql-$suffix
 cf ic run -m 256 --name mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD=Pass4Admin123 -e MYSQL_USER=dbuser -e MYSQL_PASSWORD=Pass4dbUs3R -e MYSQL_DATABASE=inventorydb registry.$region.bluemix.net/$ns/mysql-$suffix
-sleep 10 # must wait until status is running or exit if shutdown
-ok=`cf ic ps | grep mysql | grep unning | wc -l`
+sqlok=`cf ic ps | grep mysql | grep unning | wc -l`
+until [  $sqlok -ne 0 ]; do
+    sleep 10         
+    sqlok=`cf ic ps | grep mysql | grep unning | wc -l`
+    sqlerr=`cf ic ps | grep mysql | wc -l`
+    if [ $sqlerr -eq 0 ]; then 
+        echo "Cannot run the MySQL container. Exiting ..."
+        exit
+    fi
+done
+
 cf ic exec -it mysql-$suffix sh load-data.sh 
 mysqlIP=`cf ic inspect mysql-$suffix | grep -i ipaddr | head -n 1 | grep -Po '(?<="IPAddress": ")[^"]*' `
 
@@ -89,6 +98,10 @@ cldhost=`echo -e $cloudantCred | grep host |  grep -Po '(?<=\"host\": \")[^"]*'`
 cldusername=`echo -e $cloudantCred | grep username |  grep -Po '(?<=\"username\": \")[^"]*'`
 cldpassword=`echo -e $cloudantCred | grep password |  grep -Po '(?<=\"password\": \")[^"]*'`
 
+if [ $cldurl -eq "" ]; then
+    echo "Cannot instantiate cloudant. Exiting ..."
+    exit
+fi
 # get cred
 curl -X PUT $cldurl/socialreviewdb
 
@@ -118,7 +131,10 @@ cf ic group create --name zuul_cluster \
   registry.$region.bluemix.net/$ns/zuul-$suffix
   
 ossdone=`cf ic group list | grep "_cluster" | grep "CREATE_COMPLETE" | wc -l`
-
+until [  $ossdone -ne 2 ]; do
+    sleep 10         
+    ossdone=`cf ic group list | grep "_cluster" | grep "CREATE_COMPLETE" | wc -l`
+done
   
 echo "# 3c. Create inventory microservices"
 cf ic cpi vbudi/refarch-inventory registry.$region.bluemix.net/$ns/inventoryservice-$suffix
@@ -144,8 +160,12 @@ cf ic group create -p 8080 -m 256 \
   registry.$region.bluemix.net/$ns/socialreviewservice-$suffix 
   
 msdone=`cf ic group list | grep "micro-" | grep "CREATE_COMPLETE" | wc -l`
-  
-echo "# 3e deploy BFFs"
+until [  $msdone -ne 2 ]; do
+    sleep 10         
+    msdone=`cf ic group list | grep "micro-" | grep "CREATE_COMPLETE" | wc -l`
+done  
+
+echo "# 3e Clone repositories"
 cd /home/bmxuser
 git clone https://github.com/ibm-cloud-architecture/refarch-cloudnative-bff-inventory
 git clone https://github.com/ibm-cloud-architecture/refarch-cloudnative-bff-socialreview
