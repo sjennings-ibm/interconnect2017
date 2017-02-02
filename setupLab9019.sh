@@ -75,6 +75,7 @@ echo "################################################################r#######"
 echo "# 3a. Setup mysql container  "
 cf ic cpi vbudi/refarch-mysql registry.$region.bluemix.net/$ns/mysql-$suffix
 cf ic run -m 256 --name mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD=Pass4Admin123 -e MYSQL_USER=dbuser -e MYSQL_PASSWORD=Pass4dbUs3R -e MYSQL_DATABASE=inventorydb registry.$region.bluemix.net/$ns/mysql-$suffix
+echo "Waiting for mysql container to start ..."  
 sqlok=`cf ic ps | grep mysql | grep unning | wc -l`
 until [  $sqlok -ne 0 ]; do
     sleep 10         
@@ -86,7 +87,10 @@ until [  $sqlok -ne 0 ]; do
     fi
 done
 
-cf ic exec -it mysql-$suffix sh load-data.sh 
+load="cf ic exec -it mysql-$suffix sh load-data.sh"
+echo $load
+$load
+
 mysqlIP=`cf ic inspect mysql-$suffix | grep -i ipaddr | head -n 1 | grep -Po '(?<="IPAddress": ")[^"]*' `
 
 echo "# 3b. Create Cloudant database "
@@ -101,66 +105,38 @@ cldpassword=`echo -e $cloudantCred | grep password |  grep -Po '(?<=\"password\"
 if [ $cldurl -eq "" ]; then
     echo "Cannot instantiate cloudant. Exiting ..."
     exit
+else
+    echo "Cloudant url: $cldurl"
 fi
 # get cred
-curl -X PUT $cldurl/socialreviewdb
+crtdb="curl -X PUT $cldurl/socialreviewdb"
+echo $crtdb
+$crtdb
 
 echo "# 3c. Create eureka and zuul"
 cf ic cpi vbudi/refarch-eureka  registry.$region.bluemix.net/$ns/eureka-$suffix
 cf ic cpi vbudi/refarch-zuul  registry.$region.bluemix.net/$ns/zuul-$suffix
-cf ic group create --name eureka_cluster --publish 8761 --memory 256 --auto \
-  --min 1 --max 3 --desired 1 \
-  --hostname netflix-eureka-$suffix \
-  --domain $domreg$dom \
-  --env eureka.client.fetchRegistry=true \
-  --env eureka.client.registerWithEureka=true \
-  --env eureka.client.serviceUrl.defaultZone=http://netflix-eureka-$suffix.$domreg$dom/eureka/ \
-  --env eureka.instance.hostname=eureka-$suffix.$domreg$dom \
-  --env eureka.instance.nonSecurePort=80 \
-  --env eureka.port=80 \
-   registry.$region.bluemix.net/$ns/eureka-$suffix
-cf ic group create --name zuul_cluster \
-  --publish 8080 --memory 256 --auto --min 1 --max 3 --desired 1 \
-  --hostname netflix-zuul-$suffix \
-  --domain $domreg$dom \
-  --env eureka.client.serviceUrl.defaultZone="http://netflix-eureka-$suffix.$domreg$dom/eureka" \
-  --env eureka.instance.hostname=netflix-zuul-$suffix.$domreg$dom \
-  --env eureka.instance.nonSecurePort=80 \
-  --env eureka.instance.preferIpAddress=false \
-  --env spring.cloud.client.hostname=zuul-$suffix.$domreg$dom \
-  registry.$region.bluemix.net/$ns/zuul-$suffix
-  
+cf ic group create --name eureka_cluster --publish 8761 --memory 256 --auto --min 1 --max 3 --desired 1 -n netflix-eureka-$suffix -d $domreg$dom -e eureka.client.fetchRegistry=true -e eureka.client.registerWithEureka=true -e eureka.client.serviceUrl.defaultZone=http://netflix-eureka-$suffix.$domreg$dom/eureka/ -e eureka.instance.hostname=eureka-$suffix.$domreg$dom -e eureka.instance.nonSecurePort=80 -e eureka.port=80 registry.$region.bluemix.net/$ns/eureka-$suffix
+cf ic group create --name zuul_cluster --publish 8080 --memory 256 --auto --min 1 --max 3 --desired 1 -n netflix-zuul-$suffix -d $domreg$dom -e eureka.client.serviceUrl.defaultZone="http://netflix-eureka-$suffix.$domreg$dom/eureka" -e eureka.instance.hostname=netflix-zuul-$suffix.$domreg$dom -e eureka.instance.nonSecurePort=80 -e eureka.instance.preferIpAddress=false -e spring.cloud.client.hostname=zuul-$suffix.$domreg$dom registry.$region.bluemix.net/$ns/zuul-$suffix
+
+echo "Waiting for OSS to start ..."    
 ossdone=`cf ic group list | grep "_cluster" | grep "CREATE_COMPLETE" | wc -l`
-until [  $ossdone -ne 2 ]; do
+until [  $ossdone -eq 2 ]; do
     sleep 10         
     ossdone=`cf ic group list | grep "_cluster" | grep "CREATE_COMPLETE" | wc -l`
 done
   
 echo "# 3c. Create inventory microservices"
 cf ic cpi vbudi/refarch-inventory registry.$region.bluemix.net/$ns/inventoryservice-$suffix
-cf ic group create -p 8080 -m 256 --min 1 --desired 1 \
- --auto --name micro-inventory-group-$suffix \
- -e "spring.datasource.url=jdbc:mysql://$mysqlIP:3306/inventorydb" \
- -e "eureka.client.serviceUrl.defaultZone=http://netflix-eureka-$suffix.$domreg$dom/eureka/" \
- -e "spring.datasource.username=dbuser" \
- -e "spring.datasource.password=Pass4dbUs3R" \
- -n inventoryservice-$suffix -d $domreg$dom \
- registry.$region.bluemix.net/$ns/inventoryservice-$suffix
+cf ic group create -p 8080 -m 256 --min 1 --desired 1 --auto --name micro-inventory-group-$suffix -e "spring.datasource.url=jdbc:mysql://$mysqlIP:3306/inventorydb" -n inventoryservice-$suffix -d $domreg$dom  -e "eureka.client.serviceUrl.defaultZone=http://netflix-eureka-$suffix.$domreg$dom/eureka/"  -e "spring.datasource.username=dbuser" -e "spring.datasource.password=Pass4dbUs3R" registry.$region.bluemix.net/$ns/inventoryservice-$suffix
 
 echo "# 3d. Create socialreview microservices"
 cf ic cpi vbudi/refarch-socialreview registry.$region.bluemix.net/$ns/socialreviewservice-$suffix
-cf ic group create -p 8080 -m 256 \
-  --min 1 --desired 1 --auto \
-  --name micro-socialreview-group-$suffix \
-  -n socialreviewservice-$suffix -d $domreg$dom \
-  -e "eureka.client.serviceUrl.defaultZone=http://netflix-eureka-$suffix.$domreg$dom/eureka/" \
-  -e "cloudant.username=$cldusername" \
-  -e "cloudant.password=$cldpassword" \
-  -e "cloudant.host=https://$cldhost" \
-  registry.$region.bluemix.net/$ns/socialreviewservice-$suffix 
-  
+cf ic group create -p 8080 -m 256 --min 1 --desired 1 --auto --name micro-socialreview-group-$suffix -e "eureka.client.serviceUrl.defaultZone=http://netflix-eureka-$suffix.$domreg$dom/eureka/" -e "cloudant.username=$cldusername" -e "cloudant.password=$cldpassword" -e "cloudant.host=https://$cldhost" -n socialreviewservice-$suffix -d $domreg$dom  registry.$region.bluemix.net/$ns/socialreviewservice-$suffix 
+
+echo "Waiting for microservices to start ..."  
 msdone=`cf ic group list | grep "micro-" | grep "CREATE_COMPLETE" | wc -l`
-until [  $msdone -ne 2 ]; do
+until [  $msdone -eq 2 ]; do
     sleep 10         
     msdone=`cf ic group list | grep "micro-" | grep "CREATE_COMPLETE" | wc -l`
 done  
