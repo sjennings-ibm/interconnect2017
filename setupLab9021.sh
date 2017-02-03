@@ -60,17 +60,16 @@ echo "#######################################################################"
 
 # setup postgresql JDBC
 echo "#######################################################################"
-echo "# 4. Setting up postgreSQL JDBC driver"
+echo "# 4. Setting up Eclipse environment "
+git clone https://github.com/vbudi000/bluemix-integration-lab
+wget http://search.maven.org/remotecontent?filepath=com/ibm/websphere/appserver/runtime/wlp-javaee7/8.5.5.6/wlp-javaee7-8.5.5.6.zip
 wget https://jdbc.postgresql.org/download/postgresql-9.4.1212.jar
+unzip bluemix-integration-lab/wksp.zip 
+mv wksp workspace
+unzip wlp-javaee7-8.5.5.6.zip
+unzip bluemix-integration-lab/wlp-server.zip
 cp postgresql-9.4.1212.jar /home/bmxuser/wlp/usr/shared/resources/
-echo "#    JDBC driver installed   "
-echo "#######################################################################"
- 
-# work with eclipse
-echo "#######################################################################"
-echo "# 5. Initializing Eclipse workspace "
 cd /home/bmxuser
-git clone https://github.com/vbudi000/integration-lab-ic2017
-eclipse/eclipse -data ./integration-lab-ic2017&
+eclipse/eclipse -data ./workspace > /dev/null &
 echo "#    Launching Eclipse ..."
 echo "#######################################################################"
