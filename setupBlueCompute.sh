@@ -93,6 +93,25 @@ cf ic exec -it mysql-$suffix sh load-data.sh
 
 mysqlIP=`cf ic inspect mysql-$suffix | grep -i ipaddr | head -n 1 | grep -Po '(?<="IPAddress": ")[^"]*' `
 
+echo "# 3b. Create Cloudant database "
+cf create-service cloudantNoSQLDB Lite socialreviewdb-$suffix
+cf create-service-key socialreviewdb-$suffix cred
+cloudantCred=`cf service-key socialreviewdb-$suffix cred`
+cldurl=`echo -e $cloudantCred | grep url |  grep -Po '(?<=\"url\": \")[^"]*'`
+cldhost=`echo -e $cloudantCred | grep host |  grep -Po '(?<=\"host\": \")[^"]*'`
+cldusername=`echo -e $cloudantCred | grep username |  grep -Po '(?<=\"username\": \")[^"]*'`
+cldpassword=`echo -e $cloudantCred | grep password |  grep -Po '(?<=\"password\": \")[^"]*'`
+
+if [ $cldurl -eq "" ]; then
+    echo "Cannot instantiate cloudant. Exiting ..."
+    exit
+else
+    echo "Cloudant url: $cldurl"
+fi
+# get cred
+echo "curl -X PUT https://$cldusername:$cldpassword@$cldhost/socialreviewdb"
+curl -X PUT https://$cldusername:$cldpassword@$cldhost/socialreviewdb
+
 echo "# 3c. Create eureka and zuul"
 cf ic cpi vbudi/refarch-eureka  registry.$region.bluemix.net/$ns/eureka-$suffix
 cf ic cpi vbudi/refarch-zuul  registry.$region.bluemix.net/$ns/zuul-$suffix
@@ -110,9 +129,13 @@ echo "# 3c. Create inventory microservices"
 cf ic cpi vbudi/refarch-inventory registry.$region.bluemix.net/$ns/inventoryservice-$suffix
 cf ic group create -p 8080 -m 256 --min 1 --desired 1 --auto --name micro-inventory-group-$suffix -e "spring.datasource.url=jdbc:mysql://$mysqlIP:3306/inventorydb" -n inventoryservice-$suffix -d $domreg$dom  -e "eureka.client.serviceUrl.defaultZone=http://netflix-eureka-$suffix.$domreg$dom/eureka/"  -e "spring.datasource.username=dbuser" -e "spring.datasource.password=Pass4dbUs3R" registry.$region.bluemix.net/$ns/inventoryservice-$suffix
 
+echo "# 3d. Create socialreview microservices"
+cf ic cpi vbudi/refarch-socialreview registry.$region.bluemix.net/$ns/socialreviewservice-$suffix
+cf ic group create -p 8080 -m 256 --min 1 --desired 1 --auto --name micro-socialreview-group-$suffix -e "eureka.client.serviceUrl.defaultZone=http://netflix-eureka-$suffix.$domreg$dom/eureka/" -e "cloudant.username=$cldusername" -e "cloudant.password=$cldpassword" -e "cloudant.host=https://$cldhost" -n socialreviewservice-$suffix -d $domreg$dom  registry.$region.bluemix.net/$ns/socialreviewservice-$suffix 
+
 echo "Waiting for microservices to start ..."  
 msdone=`cf ic group list | grep "micro-" | grep "CREATE_COMPLETE" | wc -l`
-until [  $msdone -eq 1 ]; do
+until [  $msdone -eq 2 ]; do
     sleep 10         
     msdone=`cf ic group list | grep "micro-" | grep "CREATE_COMPLETE" | wc -l`
 done  
@@ -120,7 +143,9 @@ done
 echo "# 3e Clone repositories"
 cd /home/bmxuser
 git clone https://github.com/ibm-cloud-architecture/refarch-cloudnative-bff-inventory
+git clone https://github.com/ibm-cloud-architecture/refarch-cloudnative-bff-socialreview
 git clone https://github.com/ibm-cloud-architecture/refarch-cloudnative-api
+git clone https://github.com/ibm-cloud-architecture/refarch-cloudnative-bluecompute-web
 
 endtime=`date`
 echo $starttime $endtime

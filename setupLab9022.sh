@@ -54,7 +54,7 @@ echo "#######################################################################"
 echo "# 3. Setup a container acting as on-premises resource "
 ns=`cf ic namespace get`
 cf ic cpi bluemixenablement/todoic registry.ng.bluemix.net/$ns/todoic
-cf ic run -m 512 --name integration registry.ng.bluemix.net/$ns/todoic
+cf ic run -m 512 --expose 9080 --expose 9443 --name integration registry.ng.bluemix.net/$ns/todoic
 publicip=`cf ic ip request | grep obtained | grep -Po '(?<=\").*(?=\")'`
 cf ic ip bind $publicip integration
 echo "#    Public IP for container is: $publicip"
@@ -86,12 +86,15 @@ echo "#######################################################################"
 
 # work with eclipse
 echo "#######################################################################"
-echo "# 6. Initializing Eclipse workspace "
+echo "# 6. Setting up Eclipse environment "
 cd /home/bmxuser
-git clone https://github.com/vbudi000/integration-lab-ic2017
-eclipse/eclipse -data ./integration-lab-ic2017&
-echo "#    Launching Eclipse ..."
+git clone https://github.com/vbudi000/bluemix-integration-lab
+wget -O wlp-javaee7-8.5.5.6.zip https://repo1.maven.org/maven2/com/ibm/websphere/appserver/runtime/wlp-javaee7/8.5.5.6/wlp-javaee7-8.5.5.6.zip
+wget https://jdbc.postgresql.org/download/postgresql-9.4.1212.jar
+unzip wlp-javaee7-8.5.5.6.zip
+unzip bluemix-integration-lab/wlp-server.zip
+mv postgresql-9.4.1212.jar /home/bmxuser/wlp/usr/shared/resources/
+cd /home/bmxuser
+eclipse/eclipse -data ./workspace > /dev/null 2>1 &
+echo "#    Preparation done - your public IP is: $publicip"
 echo "#######################################################################"
-
-
-
