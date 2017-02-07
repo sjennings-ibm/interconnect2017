@@ -63,11 +63,7 @@ echo "#######################################################################"
 echo "# 4. Setting up Eclipse environment "
 cd /home/bmxuser
 git clone https://github.com/vbudi000/bluemix-integration-lab
-wget -O wlp-javaee7-8.5.5.6.zip https://repo1.maven.org/maven2/com/ibm/websphere/appserver/runtime/wlp-javaee7/8.5.5.6/wlp-javaee7-8.5.5.6.zip
-wget https://jdbc.postgresql.org/download/postgresql-9.4.1212.jar
-unzip wlp-javaee7-8.5.5.6.zip
 unzip bluemix-integration-lab/wlp-server.zip
-mv postgresql-9.4.1212.jar /home/bmxuser/wlp/usr/shared/resources/
 cd /home/bmxuser
 eclipse/eclipse -data ./workspace > /dev/null 2>1 &
 echo "#    Preparation done - your public IP is: $publicip"
