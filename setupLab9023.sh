@@ -31,7 +31,7 @@ echo
 echo "#######################################################################"
 echo "# 1. Logging in to Bluemix "
 # Run cf login
-cf login -a api.$region.bluemix.net -u "$userid" -p "$password" -o "$userid" -s dev | tee login.out
+cf login -a api.$region.bluemix.net -u "$userid" -p "$password" | tee login.out
 logerr=`grep FAILED login.out | wc -l`
 rm login.out
 if [ $logerr -eq 1 ]; then
@@ -39,8 +39,8 @@ if [ $logerr -eq 1 ]; then
   exit
 fi
 # get space and org info
-orgid=`cf ic info | grep Org |  grep -Po '(?<=\().*(?=\))'`
-spaceid=`cf ic info | grep Space | grep -Po '(?<=\().*(?=\))'`
+orgtxt=`cf target | grep "Org:" | awk '{print $2}'`
+spctxt=`cf target | grep "Space:" | awk '{print $2}'`
 echo "#    Logged in to Bluemix ...  org=$orgid, space=$spaceid"
 echo "#######################################################################"
 
