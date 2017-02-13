@@ -213,6 +213,15 @@ cf restage socialreview-bff-app-$suffix
 
 sochost=`cf apps | grep socialreview-bff | awk '{ print $6;}'`
 
+echo "# Social review BFF host: $sochost #"
+echo "#######################################################################"
+ans=""
+until [ "$ans" == "BlueCompute" ]; do
+  printf "To continue type \"BlueCompute\" and press Enter..."
+  read ans
+done
+
+
 echo "#######################################################################"
 echo "# 5 Update API definitions and publish APIs"
 
@@ -242,7 +251,11 @@ sed -i -e 's/bluecompute/bluecompute-'$suffix'/g' config/default.json
 sed -i -e 's/3f1b4cc8-78dc-450e-9461-edf377105c7a/'$clientid'/g' config/default.json
 
 cf push 
-
+echo "#######################################################################"
+echo "#######################################################################"
+echo "###         Blue Compute application successfully deployed          ###"
+echo "#######################################################################"
+echo "#######################################################################"
 endtime=`date`
 echo $starttime $endtime
 
