@@ -25,3 +25,5 @@ cf ic rmi registry.ng.bluemix.net/$ns/eureka-$suffix
 cf ic rmi registry.ng.bluemix.net/$ns/zuul-$suffix                  
 cf ic rmi registry.ng.bluemix.net/$ns/mysql-$suffix                 
 cf ic rmi registry.ng.bluemix.net/$ns/socialreviewservice-$suffix   
+
+rm -rf /home/bmxuser/refarch-cloudnative*
