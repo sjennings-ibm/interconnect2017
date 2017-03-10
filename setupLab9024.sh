@@ -1,8 +1,9 @@
 #!/bin/bash
 # get login information
-printf "Region: 1. US-South 2. Europe \n AP does not support Container\n"
-read choice
-echo "Region choise is $choice"
+# printf "Region: 1. US-South 2. Europe \n AP does not support Container\n"
+# read choice
+# echo "Region choise is $choice"
+choice=1
 printf "IBMid:"
 read userid
 echo "User id is $userid"

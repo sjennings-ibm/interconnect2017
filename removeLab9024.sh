@@ -16,6 +16,7 @@ cf delete-service "$apisrvname" -f
 
 cf ic rm -f integration-$suffix
 
+sleep 10
 imgname=`cf ic images | grep todoic | awk '{print $1;}'`
 cf ic rmi $imgname 
 
@@ -23,3 +24,10 @@ publicip=`cf ic ip list | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}"`
 cf ic ip release $publicip
 
 rm ToDoWebServicesService.wsdl
+
+sleep 20
+echo "#############################################################################"
+echo "#                 Remaining containers                                      #"
+echo "#############################################################################"
+echo ""
+echo `cf ic ps -a`

@@ -23,6 +23,7 @@ cf ic group rm eureka_cluster
 
 cf ic rm -f mysql-$suffix
 
+sleep 10
 cf ic rmi registry.ng.bluemix.net/$ns/inventoryservice-$suffix
 cf ic rmi registry.ng.bluemix.net/$ns/eureka-$suffix                
 cf ic rmi registry.ng.bluemix.net/$ns/zuul-$suffix                  
@@ -30,3 +31,10 @@ cf ic rmi registry.ng.bluemix.net/$ns/mysql-$suffix
 cf ic rmi registry.ng.bluemix.net/$ns/socialreviewservice-$suffix   
 
 rm -rf /home/bmxuser/refarch-cloudnative*
+
+sleep 20
+echo "#############################################################################"
+echo "#                 Remaining containers                                      #"
+echo "#############################################################################"
+echo ""
+echo `cf ic ps -a`

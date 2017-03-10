@@ -41,8 +41,8 @@ echo
 echo "#######################################################################"
 echo "# 1. Logging in to Bluemix "
 # Run cf login
-cf login -a api.$region.bluemix.net -u "$userid" -p "$password"  | tee login.out
-# cf login -a api.$region.bluemix.net -u "$userid" -p "$password" -o "$userid" -s cloudnative-dev | tee login.out
+# cf login -a api.$region.bluemix.net -u "$userid" -p "$password" -o "$userid" -s dev | tee login.out
+cf login -a api.$region.bluemix.net -u "$userid" -p "$password" | tee login.out
 logerr=`grep FAILED login.out | wc -l`
 rm login.out
 if [ $logerr -eq 1 ]; then
@@ -109,6 +109,7 @@ cf ic cpi vbudi/refarch-mysql registry.$region.bluemix.net/$ns/mysql-$suffix
 sleep 20
 cf ic run -m 256 --name mysql-$suffix -p 3306:3306 -e MYSQL_ROOT_PASSWORD=Pass4Admin123 -e MYSQL_USER=dbuser -e MYSQL_PASSWORD=Pass4dbUs3R -e MYSQL_DATABASE=inventorydb registry.$region.bluemix.net/$ns/mysql-$suffix
 echo "Waiting for mysql container to start ..."  
+sleep 20
 sqlok=`cf ic ps | grep mysql | grep unning | wc -l`
 until [  $sqlok -ne 0 ]; do
     sleep 10         
@@ -203,8 +204,6 @@ until [ $catexist -eq 1 ]; do
    catexist=`apic catalogs -s $apicreg.apiconnect.ibmcloud.com -o $suffix-$spctxt | grep bluecompute-$suffix | wc -l`
 done
 
-apicorg=`apic orgs -s $apicreg.apiconnect.ibmcloud.com | grep $suffix`
-
 echo "#######################################################################"
 echo "# 4a Install BFFs"
 cd /home/bmxuser/refarch-cloudnative-bff-inventory/inventory
@@ -224,7 +223,7 @@ cd /home/bmxuser/refarch-cloudnative-bff-socialreview/socialreview
 
 apic login -s $apicreg.apiconnect.ibmcloud.com -u $userid -p $password
 sleep 20
-apic config:set app=apic-app://$apicreg.apiconnect.ibmcloud.com/orgs/$apicorg/apps/socialreview-bff-app-$suffix
+apic config:set app=apic-app://$apicreg.apiconnect.ibmcloud.com/orgs/$suffix-$spctxt/apps/socialreview-bff-app-$suffix
 sleep 20
 apic apps:publish
 # sleep 20
@@ -248,17 +247,17 @@ echo "#######################################################################"
 echo "# 5 Update API definitions and publish APIs"
 
 sed -i -e 's/inventory-bff-app.mybluemix.net/inventory-bff-app-'$suffix.$domreg$dom'/g' /home/bmxuser/refarch-cloudnative-api/inventory/inventory.yaml
-sed -i -e 's/api.us.apiconnect.ibmcloud.com\/centusibmcom-cloudnative-dev\/bluecompute/api.'$apicreg'.apiconnect.ibmcloud.com\/'$apicorg'\/bluecompute-'$suffix'/g' /home/bmxuser/refarch-cloudnative-bff-socialreview/socialreview/definitions/socialreview.yaml
+sed -i -e 's/api.us.apiconnect.ibmcloud.com\/centusibmcom-cloudnative-dev\/bluecompute/api.'$apicreg'.apiconnect.ibmcloud.com\/'$suffix'-'$spctxt'\/bluecompute-'$suffix'/g' /home/bmxuser/refarch-cloudnative-bff-socialreview/socialreview/definitions/socialreview.yaml
 sed -i -e 's/apiconnect-243ab119-1c05-402c-a74c-6125122c9273.centusibmcom-cloudnative-dev.apic.mybluemix.net/'$sochost'/g' /home/bmxuser/refarch-cloudnative-bff-socialreview/socialreview/definitions/socialreview.yaml
 
 cd /home/bmxuser/refarch-cloudnative-api/inventory/
-apic config:set catalog=apic-catalog://$apicreg.apiconnect.ibmcloud.com/orgs/$apicorg/catalogs/bluecompute-$suffix
+apic config:set catalog=apic-catalog://$apicreg.apiconnect.ibmcloud.com/orgs/$suffix-$spctxt/catalogs/bluecompute-$suffix
 sleep 10
 apic publish inventory-product_0.0.1.yaml
 sleep 20
 
 cd /home/bmxuser/refarch-cloudnative-bff-socialreview/socialreview/definitions/
-apic config:set catalog=apic-catalog://$apicreg.apiconnect.ibmcloud.com/orgs/$apicorg/catalogs/bluecompute-$suffix
+apic config:set catalog=apic-catalog://$apicreg.apiconnect.ibmcloud.com/orgs/$suffix-$spctxt/catalogs/bluecompute-$suffix
 sleep 10
 apic publish socialreview-product.yaml
 sleep 20
@@ -271,7 +270,7 @@ sed -i -e 's/mybluemix.net/'$domreg$dom'/g' manifest.yml
 sed -i -e 's/bluecompute-web-app/bluecompute-web-app-'$suffix'/g' manifest.yml
 
 sed -i -e 's/api.us.apiconnect.ibmcloud.com/api.'$apicreg'.apiconnect.ibmcloud.com/g' config/default.json
-sed -i -e 's/centusibmcom-cloudnative-prod/'$apicorg'/g' config/default.json
+sed -i -e 's/centusibmcom-cloudnative-prod/'$suffix'-'$spctxt'/g' config/default.json
 sed -i -e 's/bluecompute/bluecompute-'$suffix'/g' config/default.json
 
 sed -i -e 's/ae4b5e57-0c67-4e39-b4a4-73be4fc3ff55/'$clientID'/g' config/default.json

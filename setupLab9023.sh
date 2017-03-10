@@ -1,12 +1,15 @@
-#!/bin/sh
+#!/bin/bash
 # get login information
-printf "Region: 1. US-South 2. Europe \n AP does not support Container\n"
-read choice
+# printf "Region: 1. US-South 2. Europe \n AP does not support Container\n"
+# read choice
+choice=1
 printf "IBMid:"
 read userid
+echo "User id is $userid"
 printf "Password:" 
 stty -echo
 read password
+echo "Password is $password"
 stty echo
 
 if [ $choice -eq 1 ]; then 
@@ -16,6 +19,7 @@ else
     region="eu-gb"
   fi
 fi
+echo "Region is $region"
 
 IFS="@"
 set -- $userid
@@ -27,7 +31,9 @@ if [ "${#@}" -ne 2 ];then
     echo "#####################################################"
     exit
 fi
+unset IFS
 echo
+
 echo "#######################################################################"
 echo "# 1. Logging in to Bluemix "
 # Run cf login
@@ -38,10 +44,11 @@ if [ $logerr -eq 1 ]; then
   echo "#    Login failed... Exiting"
   exit
 fi
+
 # get space and org info
 orgtxt=`cf target | grep "Org:" | awk '{print $2}'`
 spctxt=`cf target | grep "Space:" | awk '{print $2}'`
-echo "#    Logged in to Bluemix ...  org=$orgid, space=$spaceid"
+echo "#    Logged in to Bluemix ...  org=$orgtxt, space=$spctxt"
 echo "#######################################################################"
 
 # Run cf ic init
@@ -57,17 +64,23 @@ if [ $err -eq 1 ]; then
   cf ic namespace set $namespace > /dev/null
   cf ic init > /dev/null
 fi
+# get space and org info
+orgid=`cf ic info | grep Org |  grep -Po '(?<=\().*(?=\))'`
+spaceid=`cf ic info | grep Space | grep -Po '(?<=\().*(?=\))'`
 echo "#    IBM Container initialized ... "
+echo "#     Org ID = $orgid    Space ID = $spaceid  "
 echo "#######################################################################"
 
 # deploy container
 echo "#######################################################################"
 echo "# 3. Setup a container acting as on-premises resource "
+suffix=`echo -e $userid | tr -d '@_.-' | tr -d '[:space:]'`
 ns=`cf ic namespace get`
 cf ic cpi bluemixenablement/todoic registry.ng.bluemix.net/$ns/todoic
-cf ic run -m 512  --expose 5432 --expose 9432 c--name integration registry.ng.bluemix.net/$ns/todoic
-publicip=`cf ic ip request | grep obtained | grep -Po '(?<=\").*(?=\")'`
-cf ic ip bind $publicip integration
+cf ic run -m 512  --expose 5432 --expose 9432 --name integration-$suffix registry.ng.bluemix.net/$ns/todoic
+# publicip=`cf ic ip request | grep obtained | grep -Po '(?<=\").*(?=\")'`
+publicip=`cf ic ip request | grep obtained | grep -Eo "([0-9]{1,3}[\.]){3}[0-9]{1,3}"`
+cf ic ip bind $publicip integration-$suffix
 echo "#    Public IP for container is: $publicip"
 echo "#    On-premises container initialized "
 echo "#######################################################################"
