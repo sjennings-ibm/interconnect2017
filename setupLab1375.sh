@@ -195,6 +195,11 @@ git clone https://github.com/ibm-cloud-architecture/refarch-cloudnative-bff-soci
 git clone https://github.com/ibm-cloud-architecture/refarch-cloudnative-api
 git clone https://github.com/ibm-cloud-architecture/refarch-cloudnative-bluecompute-web
 
+cd /home/bmxuser/refarch-cloudnative-api 
+git checkout 555d5cc380af08876b0aa65c22d357ee4806d645
+cd /home/bmxuser/refarch-cloudnative-bluecompute-web 
+git checkout 1c0d0bc8aee0bfdce8e0f3381acb39274c1e4ef3
+
 apic login -s $apicreg.apiconnect.ibmcloud.com -u $userid -p $password
 sleep 20
 catexist=`apic catalogs -s $apicreg.apiconnect.ibmcloud.com -o $suffix-$spctxt | grep bluecompute-$suffix | wc -l`

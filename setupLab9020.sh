@@ -135,6 +135,9 @@ cd /home/bmxuser
 git clone https://github.com/ibm-cloud-architecture/refarch-cloudnative-bff-inventory
 git clone https://github.com/ibm-cloud-architecture/refarch-cloudnative-api
 git clone https://github.com/ibm-cloud-architecture/refarch-cloudnative-netflix-zuul
+cd refarch-cloudnative-api 
+git checkout 555d5cc380af08876b0aa65c22d357ee4806d645
+cd ..
 
 echo "#######################################################################"
 echo "# 4a Install Inventory BFF"
