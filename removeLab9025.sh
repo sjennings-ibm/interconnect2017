@@ -10,8 +10,10 @@ suffix=`echo -e $userid | tr -d '@_.-' | tr -d '[:space:]'`
 # wlpname=`cf apps | grep wlp-server | awk '{print $1;}'`
 # cf delete $wlpname -f
 
+cf delete-service-key dataconnect-integration dc-credential -f
 cf delete-service dataconnect-integration -f
 
+cf delete-service-key cloudantToDo toDoCredential -f
 cf delete-service cloudantToDo -f
 
 cf ic stop integration-$suffix

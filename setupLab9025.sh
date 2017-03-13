@@ -70,8 +70,8 @@ echo "#######################################################################"
 echo "# 3. Setup a container acting as on-premises resource "
 suffix=`echo -e $userid | tr -d '@_.-' | tr -d '[:space:]'`
 ns=`cf ic namespace get`
-cf ic cpi bluemixenablement/todoic registry.ng.bluemix.net/$ns/todoic
-cf ic run -m 512 --expose 5432 --expose 9432 --name integration-$suffix registry.ng.bluemix.net/$ns/todoic
+cf ic cpi bluemixenablement/todoic17 registry.ng.bluemix.net/$ns/todoic17
+cf ic run -m 512 --expose 5432 --expose 9432 --name integration-$suffix registry.ng.bluemix.net/$ns/todoic17
 publicip=`cf ic ip request | grep obtained | grep -Po '(?<=\").*(?=\")'`
 cf ic ip bind $publicip integration-$suffix
 echo "#    Public IP for container is: $publicip"
