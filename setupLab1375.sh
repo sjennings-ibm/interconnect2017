@@ -173,7 +173,7 @@ done
 ans=""
 ans1="ANS1"
 until [ "$ans" == "$ans1" ]; do
-  printf "Client ID is in the form of UUID            : 12345678-1234-1234-1234-123456789012"
+  printf "Client ID is in the form of UUID            : 12345678-1234-1234-1234-123456789012\n"
   printf "Enter Client ID for the BlueCompute-$suffix :"
   read ans
   printf "Confirm the client ID                       :"
@@ -195,18 +195,21 @@ git clone https://github.com/ibm-cloud-architecture/refarch-cloudnative-bff-soci
 git clone https://github.com/ibm-cloud-architecture/refarch-cloudnative-api
 git clone https://github.com/ibm-cloud-architecture/refarch-cloudnative-bluecompute-web
 
-cd /home/bmxuser/refarch-cloudnative-api 
-git checkout 555d5cc380af08876b0aa65c22d357ee4806d645
-cd /home/bmxuser/refarch-cloudnative-bluecompute-web 
-git checkout 1c0d0bc8aee0bfdce8e0f3381acb39274c1e4ef3
+cd /home/bmxuser/refarch-cloudnative-api
+git checkout 713ff236c7184f5a26987e27a6d0091ab1314ed9
+cd /home/bmxuser/refarch-cloudnative-bluecompute-web
+git checkout 8396d824665968e1040e423308b7e8e378f62280
+cd /home/bmxuser/refarch-cloudnative-bff-socialreview
+git checkout 41056bfd39a7e5527408122b4b7b91332749fd20
 
 apic login -s $apicreg.apiconnect.ibmcloud.com -u $userid -p $password
 sleep 20
-catexist=`apic catalogs -s $apicreg.apiconnect.ibmcloud.com -o $suffix-$spctxt | grep bluecompute-$suffix | wc -l`
+apicorg=`apic orgs -s $apicreg.apiconnect.ibmcloud.com | grep $suffix`
+catexist=`apic catalogs -s $apicreg.apiconnect.ibmcloud.com -o $apicorg | grep bluecompute-$suffix | wc -l`
 until [ $catexist -eq 1 ]; do
    echo "Cannot get the unique catalog bluecompute-$suffix. Please create the catalog ..."
    read ans
-   catexist=`apic catalogs -s $apicreg.apiconnect.ibmcloud.com -o $suffix-$spctxt | grep bluecompute-$suffix | wc -l`
+   catexist=`apic catalogs -s $apicreg.apiconnect.ibmcloud.com -o $apicorg | grep bluecompute-$suffix | wc -l`
 done
 
 echo "#######################################################################"
@@ -228,13 +231,13 @@ cd /home/bmxuser/refarch-cloudnative-bff-socialreview/socialreview
 
 apic login -s $apicreg.apiconnect.ibmcloud.com -u $userid -p $password
 sleep 20
-apic config:set app=apic-app://$apicreg.apiconnect.ibmcloud.com/orgs/$suffix-$spctxt/apps/socialreview-bff-app-$suffix
+apic config:set app=apic-app://$apicreg.apiconnect.ibmcloud.com/orgs/$apicorg/apps/socialreview-bff-app-$suffix
 sleep 20
 apic apps:publish
-# sleep 20
-# cf bs socialreview-bff-app-$suffix cloudnative-autoscale-$suffix
-# sleep 20
-# cf restage socialreview-bff-app-$suffix
+sleep 20
+cf bs socialreview-bff-app-$suffix cloudnative-autoscale-$suffix
+sleep 20
+cf restage socialreview-bff-app-$suffix
 sleep 20
 
 sochost=`cf apps | grep socialreview-bff | awk '{ print $6;}'`
@@ -252,17 +255,17 @@ echo "#######################################################################"
 echo "# 5 Update API definitions and publish APIs"
 
 sed -i -e 's/inventory-bff-app.mybluemix.net/inventory-bff-app-'$suffix.$domreg$dom'/g' /home/bmxuser/refarch-cloudnative-api/inventory/inventory.yaml
-sed -i -e 's/api.us.apiconnect.ibmcloud.com\/centusibmcom-cloudnative-dev\/bluecompute/api.'$apicreg'.apiconnect.ibmcloud.com\/'$suffix'-'$spctxt'\/bluecompute-'$suffix'/g' /home/bmxuser/refarch-cloudnative-bff-socialreview/socialreview/definitions/socialreview.yaml
+sed -i -e 's/api.us.apiconnect.ibmcloud.com\/centusibmcom-cloudnative-dev\/bluecompute/api.'$apicreg'.apiconnect.ibmcloud.com\/'$apicorg'\/bluecompute-'$suffix'/g' /home/bmxuser/refarch-cloudnative-bff-socialreview/socialreview/definitions/socialreview.yaml
 sed -i -e 's/apiconnect-243ab119-1c05-402c-a74c-6125122c9273.centusibmcom-cloudnative-dev.apic.mybluemix.net/'$sochost'/g' /home/bmxuser/refarch-cloudnative-bff-socialreview/socialreview/definitions/socialreview.yaml
 
 cd /home/bmxuser/refarch-cloudnative-api/inventory/
-apic config:set catalog=apic-catalog://$apicreg.apiconnect.ibmcloud.com/orgs/$suffix-$spctxt/catalogs/bluecompute-$suffix
+apic config:set catalog=apic-catalog://$apicreg.apiconnect.ibmcloud.com/orgs/$apicorg/catalogs/bluecompute-$suffix
 sleep 10
 apic publish inventory-product_0.0.1.yaml
 sleep 20
 
 cd /home/bmxuser/refarch-cloudnative-bff-socialreview/socialreview/definitions/
-apic config:set catalog=apic-catalog://$apicreg.apiconnect.ibmcloud.com/orgs/$suffix-$spctxt/catalogs/bluecompute-$suffix
+apic config:set catalog=apic-catalog://$apicreg.apiconnect.ibmcloud.com/orgs/$apicorg/catalogs/bluecompute-$suffix
 sleep 10
 apic publish socialreview-product.yaml
 sleep 20
@@ -275,10 +278,10 @@ sed -i -e 's/mybluemix.net/'$domreg$dom'/g' manifest.yml
 sed -i -e 's/bluecompute-web-app/bluecompute-web-app-'$suffix'/g' manifest.yml
 
 sed -i -e 's/api.us.apiconnect.ibmcloud.com/api.'$apicreg'.apiconnect.ibmcloud.com/g' config/default.json
-sed -i -e 's/centusibmcom-cloudnative-prod/'$suffix'-'$spctxt'/g' config/default.json
+sed -i -e 's/centusibmcom-cloudnative-dev/'$apicorg'/g' config/default.json
 sed -i -e 's/bluecompute/bluecompute-'$suffix'/g' config/default.json
 
-sed -i -e 's/ae4b5e57-0c67-4e39-b4a4-73be4fc3ff55/'$clientID'/g' config/default.json
+sed -i -e 's/3f1b4cc8-78dc-450e-9461-edf377105c7a/'$clientID'/g' config/default.json
 
 cf push 
 echo "#######################################################################"
