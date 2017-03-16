@@ -199,8 +199,6 @@ cd /home/bmxuser/refarch-cloudnative-api
 git checkout 713ff236c7184f5a26987e27a6d0091ab1314ed9
 cd /home/bmxuser/refarch-cloudnative-bluecompute-web
 git checkout 8396d824665968e1040e423308b7e8e378f62280
-cd /home/bmxuser/refarch-cloudnative-bff-socialreview
-git checkout 41056bfd39a7e5527408122b4b7b91332749fd20
 
 apic login -s $apicreg.apiconnect.ibmcloud.com -u $userid -p $password
 sleep 20
@@ -260,15 +258,25 @@ sed -i -e 's/apiconnect-243ab119-1c05-402c-a74c-6125122c9273.centusibmcom-cloudn
 
 cd /home/bmxuser/refarch-cloudnative-api/inventory/
 apic config:set catalog=apic-catalog://$apicreg.apiconnect.ibmcloud.com/orgs/$apicorg/catalogs/bluecompute-$suffix
-sleep 10
-apic publish inventory-product_0.0.1.yaml
-sleep 20
+
+publishDone=`apic publish inventory-product_0.0.1.yaml | grep "Published " | wc -l`
+until [  $publishDone -eq 1 ]; do
+    sleep 10         
+    publishDone=`apic publish inventory-product_0.0.1.yaml | grep "Published " | wc -l`
+    sleep 10
+done  
 
 cd /home/bmxuser/refarch-cloudnative-bff-socialreview/socialreview/definitions/
 apic config:set catalog=apic-catalog://$apicreg.apiconnect.ibmcloud.com/orgs/$apicorg/catalogs/bluecompute-$suffix
 sleep 10
-apic publish socialreview-product.yaml
-sleep 20
+ans="0"
+
+publishDone=`apic publish socialreview-product.yaml | grep "Published " | wc -l`
+until [  $publishDone -eq 1 ]; do
+    sleep 10         
+    publishDone=`apic publish socialreview-product.yaml | grep "Published " | wc -l`
+    sleep 10
+done  
 
 echo "#######################################################################"
 echo "# 6 prepare Web application"
